@@ -884,30 +884,45 @@
         }
 
         // ===== Form Handling =====
-        async function submitWaitlistForm(formData, isModal = false) {
-            // Simulate API call to Google Cloud Function
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    const submission = {
-                        id: generateUserId(),
-                        timestamp: new Date().toISOString(),
-                        ...Object.fromEntries(formData)
-                    };
+async function submitWaitlistForm(formData, isModal = false) {
+    // Get the form data as a simple object
+    const formDataObject = Object.fromEntries(formData);
+    const webhookUrl = 'https://hook.us2.make.com/your_unique_webhook_here'; // You will change this later
 
-                    // Store in localStorage for demo purposes
-                    const existing = JSON.parse(localStorage.getItem(WAITLIST_KEY) || '[]');
-                    existing.push(submission);
-                    localStorage.setItem(WAITLIST_KEY, JSON.stringify(existing));
+    // Show a success message immediately to the user
+    showStatus('✅ Thank you! You have been added to our waiting list. We will contact you shortly.', true, isModal);
 
-                    // Update counter
-                    const newCount = existing.length;
-                    localStorage.setItem('waitlist_count', newCount);
-                    animateCounter(waitlistCount, newCount);
+    // Log the data to the console for now so you can see it's working
+    console.log('Form submission captured:', formDataObject);
 
-                    resolve({
-                        status: 'success',
-                        message: '✅ Thank you! You have been added to our waiting list. We will contact you shortly.'
-                    });
+    // Save to localStorage as a backup
+    const existing = JSON.parse(localStorage.getItem(WAITLIST_KEY) || '[]');
+    existing.push({
+        id: generateUserId(),
+        timestamp: new Date().toISOString(),
+        ...formDataObject
+    });
+    localStorage.setItem(WAITLIST_KEY, JSON.stringify(existing));
+
+    // Update the counter
+    const newCount = existing.length;
+    localStorage.setItem('waitlist_count', newCount);
+    animateCounter(waitlistCount, newCount);
+
+    // Try to send the data to a Make.com webhook (more reliable)
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formDataObject),
+        });
+        console.log('Data also sent to webhook successfully');
+    } catch (error) {
+        console.error('Error sending to webhook (but data is saved locally):', error);
+    }
+}
                 }, 1500);
             });
         }
